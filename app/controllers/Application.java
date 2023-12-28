@@ -12,6 +12,8 @@ import play.mvc.Http;
 import play.mvc.Result;
 import views.html.index;
 import views.html.setup;
+import views.html.indexcontacts;
+
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -61,10 +63,37 @@ public class Application extends Controller {
             return CompletableFuture.completedFuture(redirect(routes.Application.setup()));
         }
     }
+    
+    public CompletionStage<Result> indexcontacts(String code) {
+        if (isSetup()) {
+            if (code == null) {
+                // start oauth
+                final String url = "https://login.salesforce.com/services/oauth2/authorize?response_type=code" +
+                        "&client_id=" + force.consumerKey() +
+                        "&redirect_uri=" + oauthCallbackUrl(request());
+                return CompletableFuture.completedFuture(redirect(url));
+            } else {
+                return force.getToken(code, oauthCallbackUrl(request())).thenCompose(authInfo ->
+                        force.getContacts(authInfo).thenApply(contacts ->
+                                ok(indexcontacts.render(contacts))
+                        )
+                ).exceptionally(error -> {
+                    if (error.getCause() instanceof Force.AuthException)
+                        return redirect(routes.Application.indexcontacts(null));
+                    else
+                        return internalServerError(error.getMessage());
+                });
+            }
+        } else {
+            return CompletableFuture.completedFuture(redirect(routes.Application.setup()));
+        }
+    }    
 
     public Result setup() {
         if (isSetup()) {
-            return redirect(routes.Application.index(null));
+           // return redirect(routes.Application.index(null));
+            return redirect(routes.Application.indexcontacts(null));
+            
         } else {
             final String maybeHerokuAppName = request().host().split(".herokuapp.com")[0].replaceAll(request().host(), "");
             return ok(setup.render(maybeHerokuAppName));
@@ -114,15 +143,30 @@ public class Application extends Controller {
         public static class Account {
             public String Id;
             public String Name;
+            public String Active__c;            
             public String Type;
             public String Industry;
             public String Rating;
+        }
+        
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class Contact {
+            public String Id;
+          //  public String External_Id__c;            
+        //    public String AccountId;
+          //  public String Email;            
+            public String LastName;
         }
 
         @JsonIgnoreProperties(ignoreUnknown = true)
         public static class QueryResultAccount {
             public List<Account> records;
         }
+        
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class QueryResultContact {
+            public List<Contact> records;
+        }        
 
         @JsonIgnoreProperties(ignoreUnknown = true)
         public static class AuthInfo {
@@ -142,8 +186,9 @@ public class Application extends Controller {
         CompletionStage<List<Account>> getAccounts(AuthInfo authInfo) {
             CompletionStage<WSResponse> responsePromise = ws.url(authInfo.instanceUrl + "/services/data/v59.0/query/")
                     .addHeader("Authorization", "Bearer " + authInfo.accessToken)
-                    .addQueryParameter("q", "SELECT Id, Name, Type, Industry, Rating FROM Account")
+                    .addQueryParameter("q", "SELECT Id, Name, Active__c, Type, Industry, Rating FROM Account")
                     .get();
+            System.out.println("getAccounts");
 
             return responsePromise.thenCompose(response -> {
                 final JsonNode jsonNode = response.asJson();
@@ -157,6 +202,34 @@ public class Application extends Controller {
                 }
             });
         }
+        
+//        public String Id;
+//        public String External_Id__c;            
+//        public String AccountId;
+//        public String Email;            
+//        public String Lastname;
+        
+        CompletionStage<List<Contact>> getContacts(AuthInfo authInfo) {
+            CompletionStage<WSResponse> responsePromise = ws.url(authInfo.instanceUrl + "/services/data/v59.0/query/")
+                    .addHeader("Authorization", "Bearer " + authInfo.accessToken)
+                    .addQueryParameter("q", "SELECT Id, LastName FROM Contact")
+                    .get();
+            System.out.println("getContacts");
+            return responsePromise.thenCompose(response -> {
+                final JsonNode jsonNode = response.asJson();
+                if (jsonNode.has("error")) {
+                    CompletableFuture<List<Contact>> completableFuture = new CompletableFuture<>();
+                    completableFuture.completeExceptionally(new AuthException(jsonNode.get("error").textValue()));
+                    return completableFuture;
+                } else {
+               	 System.out.println(jsonNode.toString());
+
+                    QueryResultContact queryResultContact = Json.fromJson(jsonNode, QueryResultContact.class);
+                    return CompletableFuture.completedFuture(queryResultContact.records);
+                }
+            });
+        }
+        
     }
 
 }
