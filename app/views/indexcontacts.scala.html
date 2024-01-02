@@ -2,9 +2,9 @@
 
 @main {
 <h2>Rechercher mes données</h2>
-<form name="myForm" action="#">
+<form name="myForm" action="/">
 <table cellpadding="5" cellspacing="5">
-<tr> <td> Mon email :&nbsp;</td><td> <input type="test" name="email"> </td>
+<tr> <td> Mon email :&nbsp;</td><td> <input type="text" name="email"> </td>
 </tr>
 <tr><td>&nbsp;</td></tr>
 <tr><td colspan="2" align="right"> <input type="submit" value="Rechercher"> </td> </tr>
@@ -13,18 +13,30 @@
 <br>
 <hr>
 
-    <h2>Liste des Contacts LEGARANT</h2>
+    <h2>Résultat de ma recherche</h2>
 
 
     <table class="table">
         <tr>
             <th>Id</th>
             <th>LastName</th>
+            <th>Email</th>
+            <th>Account Id</th>
+            <th>Phone</th>
+            
+            
+            
         </tr>
         @contacts.map { contact =>
             <tr>
                 <td>@contact.Id</td>
                 <td>@contact.LastName</td>
+                <td>@contact.Email</td>
+                <td>@contact.AccountId</td>
+                <td>@contact.Phone</td>
+                
+                
+                
             </tr>
         }
     </table>

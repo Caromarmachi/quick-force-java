@@ -13,7 +13,10 @@ import play.mvc.Result;
 import views.html.index;
 import views.html.setup;
 import views.html.indexcontacts;
-
+import java.util.Set;
+import java.util.Map;
+import java.util.Arrays;
+import java.util.ArrayList;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -24,8 +27,10 @@ import java.util.concurrent.CompletionStage;
 public class Application extends Controller {
     @Inject
     private Force force;
-
+    
     private boolean isSetup() {
+    	System.out.println("Methode isSetup");
+
         try {
             force.consumerKey();
             force.consumerSecret();
@@ -36,10 +41,14 @@ public class Application extends Controller {
     }
 
     private String oauthCallbackUrl(Http.Request request) {
+    	System.out.println("Methode oauthCallbackUrl");
+
         return (request.secure() ? "https" : "http") + "://" + request.host();
     }
 
     public CompletionStage<Result> index(String code) {
+    	System.out.println("Methode index");
+
         if (isSetup()) {
             if (code == null) {
                 // start oauth
@@ -64,7 +73,24 @@ public class Application extends Controller {
         }
     }
     
-    public CompletionStage<Result> indexcontacts(String code) {
+    public CompletionStage<Result> indexcontacts(String code) { // C1
+    	System.out.println("methode indexcontacts");
+ 
+    	
+//        final Set<Map.Entry<String,String[]>> entries = request().queryString().entrySet();
+//        for (Map.Entry<String,String[]> entry : entries) {
+//            final String key = entry.getKey();
+//            final String value = Arrays.toString(entry.getValue());
+//            System.out.println(key + " " + value);
+//        }
+ //       System.out.println(request().getQueryString("email"));
+    	String paramRecherche = request().getQueryString("email");
+    	if (paramRecherche!=null) {
+    		this.force.setRecherche(paramRecherche);
+    	}
+
+    	
+    	
         if (isSetup()) {
             if (code == null) {
                 // start oauth
@@ -90,6 +116,8 @@ public class Application extends Controller {
     }    
 
     public Result setup() {
+    	System.out.println("Methode setup");
+
         if (isSetup()) {
            // return redirect(routes.Application.index(null));
             return redirect(routes.Application.indexcontacts(null));
@@ -109,15 +137,33 @@ public class Application extends Controller {
         @Inject
         Config config;
 
+        private String recherche;
+        
+        
+        public String getRecherche() {
+        	return this.recherche;
+        }
+        
+        public void setRecherche(String recherche) {
+        	this.recherche = recherche;
+        }
+
+        
         String consumerKey() {
+        	System.out.println("Classe Force Methode consumerKey");
+
             return config.getString("consumer.key");
         }
 
         String consumerSecret() {
+        	System.out.println("Classe Force Methode consumerSecret");
+        	
             return config.getString("consumer.secret");
         }
 
         CompletionStage<AuthInfo> getToken(String code, String redirectUrl) {
+        	System.out.println("Classe Force Methode getToken");
+
             final CompletionStage<WSResponse> responsePromise = ws.url("https://login.salesforce.com/services/oauth2/token")
                     .addQueryParameter("grant_type", "authorization_code")
                     .addQueryParameter("code", code)
@@ -153,9 +199,11 @@ public class Application extends Controller {
         public static class Contact {
             public String Id;
           //  public String External_Id__c;            
-        //    public String AccountId;
-          //  public String Email;            
+            public String AccountId;
+            public String Email;            
             public String LastName;
+            public String Phone;
+            
         }
 
         @JsonIgnoreProperties(ignoreUnknown = true)
@@ -184,11 +232,13 @@ public class Application extends Controller {
         }
 
         CompletionStage<List<Account>> getAccounts(AuthInfo authInfo) {
+            System.out.println(" Methode getAccounts");
+
+
             CompletionStage<WSResponse> responsePromise = ws.url(authInfo.instanceUrl + "/services/data/v59.0/query/")
                     .addHeader("Authorization", "Bearer " + authInfo.accessToken)
                     .addQueryParameter("q", "SELECT Id, Name, Active__c, Type, Industry, Rating FROM Account")
                     .get();
-            System.out.println("getAccounts");
 
             return responsePromise.thenCompose(response -> {
                 final JsonNode jsonNode = response.asJson();
@@ -210,24 +260,37 @@ public class Application extends Controller {
 //        public String Lastname;
         
         CompletionStage<List<Contact>> getContacts(AuthInfo authInfo) {
-            CompletionStage<WSResponse> responsePromise = ws.url(authInfo.instanceUrl + "/services/data/v59.0/query/")
-                    .addHeader("Authorization", "Bearer " + authInfo.accessToken)
-                    .addQueryParameter("q", "SELECT Id, LastName FROM Contact")
-                    .get();
-            System.out.println("getContacts");
-            return responsePromise.thenCompose(response -> {
-                final JsonNode jsonNode = response.asJson();
-                if (jsonNode.has("error")) {
-                    CompletableFuture<List<Contact>> completableFuture = new CompletableFuture<>();
-                    completableFuture.completeExceptionally(new AuthException(jsonNode.get("error").textValue()));
-                    return completableFuture;
-                } else {
-               	 System.out.println(jsonNode.toString());
+            System.out.println("Methode getContacts");
 
-                    QueryResultContact queryResultContact = Json.fromJson(jsonNode, QueryResultContact.class);
-                    return CompletableFuture.completedFuture(queryResultContact.records);
-                }
-            });
+        //    System.out.println(request().getQueryString("email"));
+            String soqlRecherche = "";
+            if (this.recherche!=null) {
+            	soqlRecherche = "where Email='" + this.recherche + "'";	
+            
+
+	            CompletionStage<WSResponse> responsePromise = ws.url(authInfo.instanceUrl + "/services/data/v59.0/query/")
+	                    .addHeader("Authorization", "Bearer " + authInfo.accessToken)
+	                    .addQueryParameter("q", "SELECT Id, LastName, Email, AccountId, Phone FROM Contact " + soqlRecherche)
+	                    .get();
+	            return responsePromise.thenCompose(response -> {
+	                final JsonNode jsonNode = response.asJson();
+	                if (jsonNode.has("error")) {
+	                    CompletableFuture<List<Contact>> completableFuture = new CompletableFuture<>();
+	                    completableFuture.completeExceptionally(new AuthException(jsonNode.get("error").textValue()));
+	                    return completableFuture;
+	                } else {
+	               	// System.out.println(jsonNode.toString());
+	
+	                    QueryResultContact queryResultContact = Json.fromJson(jsonNode, QueryResultContact.class);
+	                    return CompletableFuture.completedFuture(queryResultContact.records);
+	                }
+	            });
+            } else {
+            	List<Contact> listeVide = new ArrayList<Contact>();
+            	
+            	
+            	return CompletableFuture.completedFuture(listeVide);
+            }
         }
         
     }
