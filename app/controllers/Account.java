@@ -24,6 +24,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+
+/**
+ * 
+ * @author Carolina
+ * @description Classe de mapping Java / SalesForce pour l'objet Account (partiel)
+ *
+ */
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public  class Account {
     public String Id;

@@ -24,10 +24,25 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+/**
+ * 
+ * @author Carolina
+ * @description Classe principale de l'application,
+ * controller du framework play
+ * controle les différentes pages et l'ordonnancement des appels
+ *
+ */
+
 public class Application extends Controller {
     @Inject
     private Force force;
-    
+   
+    /**
+     * 
+     * @description Methode isSetup qui verifie si l'application dispose des 2 codes 
+     * consumer.key et consumer.secret. Sinon, elle dirige vers une page d'information
+     *
+     */    
     private boolean isSetup() {
     	System.out.println("Methode isSetup");
 
@@ -40,12 +55,24 @@ public class Application extends Controller {
         }
     }
 
+    /**
+     * 
+     * @description Methode qui precise l'URL de callback dans le cadre de l'authentification oauth
+     *
+     */      
     private String oauthCallbackUrl(Http.Request request) {
     	System.out.println("Methode oauthCallbackUrl");
 
         return (request.secure() ? "https" : "http") + "://" + request.host();
     }
 
+    
+    /**
+     * 
+     * @description Methode qui affiche la "route" index. 
+     * Cette méthode utilise l'authentification oauth  (via la classe Force) puis redirige vers la route "index"
+     * C'est une page qui liste tous les AccountSalesforce.
+     */     
     public CompletionStage<Result> index(String code) {
     	System.out.println("Methode index");
 
@@ -62,7 +89,7 @@ public class Application extends Controller {
                                 ok(index.render(accounts))
                         )
                 ).exceptionally(error -> {
-                    if (error.getCause() instanceof Force.AuthException)
+                    if (error.getCause() instanceof AuthException)
                         return redirect(routes.Application.index(null));
                     else
                         return internalServerError(error.getMessage());
@@ -73,17 +100,16 @@ public class Application extends Controller {
         }
     }
     
+    /**
+     * 
+     * @description Methode qui affiche la "route" indexContact. 
+     * Cette méthode utilise l'authentification oauth (via la classe Force) puis redirige vers la route "indexContacts"
+     * C'est une page qui affiche un formulaire de recherche de contact par email.
+     */     
     public CompletionStage<Result> indexcontacts(String code) { // C1
     	System.out.println("methode indexcontacts");
  
     	
-//        final Set<Map.Entry<String,String[]>> entries = request().queryString().entrySet();
-//        for (Map.Entry<String,String[]> entry : entries) {
-//            final String key = entry.getKey();
-//            final String value = Arrays.toString(entry.getValue());
-//            System.out.println(key + " " + value);
-//        }
- //       System.out.println(request().getQueryString("email"));
     	String paramRecherche = request().getQueryString("email");
     	if (paramRecherche!=null) {
     		this.force.setRecherche(paramRecherche);
@@ -104,7 +130,7 @@ public class Application extends Controller {
                                 ok(indexcontacts.render(contacts))
                         )
                 ).exceptionally(error -> {
-                    if (error.getCause() instanceof Force.AuthException)
+                    if (error.getCause() instanceof AuthException)
                         return redirect(routes.Application.indexcontacts(null));
                     else
                         return internalServerError(error.getMessage());
@@ -119,7 +145,6 @@ public class Application extends Controller {
     	System.out.println("Methode setup");
 
         if (isSetup()) {
-           // return redirect(routes.Application.index(null));
             return redirect(routes.Application.indexcontacts(null));
             
         } else {

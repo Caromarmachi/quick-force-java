@@ -24,6 +24,13 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+/**
+ * 
+ * @author Carolina
+ * @description Classe utilitaire de type "contener", contenant une liste de contacts
+ *
+ */
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public  class QueryResultContact {
 	public List<Contact> records;

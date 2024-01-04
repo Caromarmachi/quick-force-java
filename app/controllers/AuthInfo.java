@@ -24,6 +24,13 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+/**
+ * 
+ * @author Carolina
+ * @description Classe utilitaire utilisée pour la connexion, contient le token et l'URL
+ *
+ */
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public  class AuthInfo {
 	@JsonProperty("access_token")

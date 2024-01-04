@@ -24,6 +24,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+/**
+ * 
+ * @author Carolina
+ * @description Classe contenant les différents services utilisés,
+ * et notamment les appels web services de récupération des contacts et comptes
+ *
+ */
+
 @Singleton
 public class Force {
 @Inject
@@ -44,19 +52,21 @@ public void setRecherche(String recherche) {
 }
 
 
-String consumerKey() {
+public String consumerKey() {
 	System.out.println("Classe Force Methode consumerKey");
 
     return config.getString("consumer.key");
 }
 
-String consumerSecret() {
+public String consumerSecret() {
 	System.out.println("Classe Force Methode consumerSecret");
 	
     return config.getString("consumer.secret");
 }
-
-CompletionStage<AuthInfo> getToken(String code, String redirectUrl) {
+/**
+ * @description Methode getToken d'authentification oauth
+ */
+public CompletionStage<AuthInfo> getToken(String code, String redirectUrl) {
 	System.out.println("Classe Force Methode getToken");
 
     final CompletionStage<WSResponse> responsePromise = ws.url("https://login.salesforce.com/services/oauth2/token")
@@ -82,8 +92,10 @@ CompletionStage<AuthInfo> getToken(String code, String redirectUrl) {
 
 
 
-
-	CompletionStage<List<Account>> getAccounts(AuthInfo authInfo) {
+/**
+ * @description Methode effectuant un appel web service salesforce pour récupérer la liste des comptes.
+ */
+public	CompletionStage<List<Account>> getAccounts(AuthInfo authInfo) {
 		System.out.println(" Methode getAccounts");
 
 		CompletionStage<WSResponse> responsePromise = ws.url(authInfo.instanceUrl + "/services/data/v59.0/query/")
@@ -104,8 +116,11 @@ CompletionStage<AuthInfo> getToken(String code, String redirectUrl) {
 	}
 
 
-
-	CompletionStage<List<Contact>> getContacts(AuthInfo authInfo) {
+/**
+ * @description Methode effectuant un appel web service salesforce pour récupérer la liste des contacts
+ * basés sur le formulaire de recherche (champ email).
+ */
+public	CompletionStage<List<Contact>> getContacts(AuthInfo authInfo) {
 		System.out.println("Methode getContacts");
 
 //    System.out.println(request().getQueryString("email"));
